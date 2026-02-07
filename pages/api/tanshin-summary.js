@@ -2,6 +2,7 @@ const fs = require('fs/promises');
 const path = require('path');
 
 const MAX_FILES = 500;
+
 const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
 
 const isWithinAllowedRoots = (targetPath) => {
