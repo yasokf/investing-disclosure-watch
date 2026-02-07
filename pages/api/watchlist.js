@@ -1,8 +1,8 @@
-const db = require('../../lib/db');
+const { addWatchlist, getWatchlist, removeWatchlist } = require('../../lib/db');
 
 export default function handler(req, res) {
   if (req.method === 'GET') {
-    const items = db.prepare('SELECT id, code, name FROM watchlist ORDER BY id DESC').all();
+    const items = getWatchlist();
     res.status(200).json({ items });
     return;
   }
@@ -13,10 +13,8 @@ export default function handler(req, res) {
       res.status(400).json({ error: 'code and name are required' });
       return;
     }
-    const result = db
-      .prepare('INSERT INTO watchlist (code, name) VALUES (?, ?)')
-      .run(code, name);
-    res.status(201).json({ id: result.lastInsertRowid });
+    const entry = addWatchlist({ code, name });
+    res.status(201).json({ id: entry.id });
     return;
   }
 
@@ -26,7 +24,7 @@ export default function handler(req, res) {
       res.status(400).json({ error: 'id is required' });
       return;
     }
-    db.prepare('DELETE FROM watchlist WHERE id = ?').run(id);
+    removeWatchlist(Number(id));
     res.status(200).json({ ok: true });
     return;
   }
