@@ -1,14 +1,6 @@
 const fs = require('fs/promises');
 const path = require('path');
-const loadPdfParse = () => {
-  try {
-    // Defer resolving pdf-parse so build does not fail when dependency is missing locally.
-    // eslint-disable-next-line no-eval
-    return eval('require')('pdf-parse');
-  } catch (error) {
-    return null;
-  }
-};
+const pdfParse = require('pdf-parse');
 
 const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
 const MAX_FILES = 200;
@@ -128,8 +120,7 @@ const extractMetricsFromText = (text) => {
   const forecastLines = sliceAround(lines, forecastSection, 25);
 
   const salesLine = findMetricLine(performanceLines, '売上高') || findMetricLine(lines, '売上高');
-  const opLine =
-    findMetricLine(performanceLines, '営業利益') || findMetricLine(lines, '営業利益');
+  const opLine = findMetricLine(performanceLines, '営業利益') || findMetricLine(lines, '営業利益');
 
   const salesNumbers = salesLine ? parseNumbers(salesLine.normalized) : [];
   const opNumbers = opLine ? parseNumbers(opLine.normalized) : [];
@@ -144,17 +135,14 @@ const extractMetricsFromText = (text) => {
   const forecastOpLine =
     findForecastLine(forecastLines, '営業利益') || findForecastLine(lines, '営業利益');
 
-  const forecastSales = forecastSalesLine
-    ? parseNumbers(forecastSalesLine.normalized)[0] ?? null
-    : null;
-  const forecastOp = forecastOpLine ? parseNumbers(forecastOpLine.normalized)[0] ?? null : null;
+  const forecastSales = forecastSalesLine ? (parseNumbers(forecastSalesLine.normalized)[0] ?? null) : null;
+  const forecastOp = forecastOpLine ? (parseNumbers(forecastOpLine.normalized)[0] ?? null) : null;
 
   const backlogCandidates = lines.filter((line) =>
     ['受注残高合計', '受注残高', '受注残'].some((keyword) => line.normalized.includes(keyword))
   );
   const backlogLine =
-    backlogCandidates.find((line) => line.normalized.includes('受注残高')) ||
-    backlogCandidates[0];
+    backlogCandidates.find((line) => line.normalized.includes('受注残高')) || backlogCandidates[0];
   const backlogNumbers = backlogLine ? parseNumbers(backlogLine.normalized) : [];
   const backlogValue = backlogNumbers[0] ?? null;
   const backlogPrevious = backlogNumbers[1] ?? null;
@@ -285,10 +273,6 @@ const extractFromFile = async (filePath, cache) => {
   }
 
   try {
-    const pdfParse = loadPdfParse();
-    if (!pdfParse) {
-      throw new Error('pdf-parse is not installed');
-    }
     const buffer = await fs.readFile(filePath);
     const data = await pdfParse(buffer);
     const parsed = extractMetricsFromText(data.text || '');
@@ -342,6 +326,13 @@ export default async function handler(req, res) {
 
   try {
     await fs.access(targetPath);
+
+    const stat = await fs.stat(targetPath);
+    if (!stat.isDirectory()) {
+      res.status(400).json({ error: 'path is not a directory' });
+      return;
+    }
+
     const files = await collectPdfFiles(targetPath);
     const cache = await readCache();
 
