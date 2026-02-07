@@ -27,7 +27,9 @@ const collectPdfFiles = async (rootPath) => {
     const entries = await fs.readdir(currentDir, { withFileTypes: true });
 
     for (const entry of entries) {
-      if (results.length >= MAX_FILES) break;
+      if (results.length >= MAX_FILES) {
+        break;
+      }
 
       const fullPath = path.join(currentDir, entry.name);
 
@@ -53,6 +55,7 @@ export default async function handler(req, res) {
   }
 
   const { path: targetPath } = req.body || {};
+
   if (!targetPath || typeof targetPath !== 'string') {
     res.status(400).json({ error: 'path is required' });
     return;

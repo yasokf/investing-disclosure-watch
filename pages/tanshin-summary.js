@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
+const DEFAULT_PATH = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
+
 const formatBytes = (bytes) => {
-  if (!bytes) return '0 B';
+  if (!bytes) {
+    return '0 B';
+  }
   const units = ['B', 'KB', 'MB', 'GB'];
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / Math.pow(1024, index);
@@ -23,8 +27,9 @@ const fmtPct = (v) => {
   return `${n.toFixed(1)}%`;
 };
 
-function TanshinKpiTable({ items }) {
-  const list = items || [];
+function TanshinKpiTable({ rows, items }) {
+  const list = rows || items || [];
+
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900 }}>
@@ -58,23 +63,41 @@ function TanshinKpiTable({ items }) {
         <tbody>
           {list.map((r) => {
             const m = r.metrics || {};
-            const sales = m.sales || {};
-            const op = m.op || {};
+            const sales = m.sales || m.revenue || {};
+            const op = m.op || m.operatingProfit || {};
             const orders = m.orders || {};
             const backlog = m.backlog || {};
+
             return (
               <tr key={r.path || r.name || r.filePath}>
-                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtNum(sales.value)}</td>
-                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtNum(op.value)}</td>
-                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtPct(sales.yoyPct)}</td>
-                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtPct(op.yoyPct)}</td>
-                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtNum(orders.value)}</td>
-                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtNum(backlog.value)}</td>
-                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtPct(orders.yoyPct)}</td>
-                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtPct(backlog.yoyPct)}</td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>
+                  {fmtNum(sales.value)}
+                </td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>
+                  {fmtNum(op.value)}
+                </td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>
+                  {fmtPct(sales.yoyPct)}
+                </td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>
+                  {fmtPct(op.yoyPct)}
+                </td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>
+                  {fmtNum(orders.value)}
+                </td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>
+                  {fmtNum(backlog.value)}
+                </td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>
+                  {fmtPct(orders.yoyPct)}
+                </td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>
+                  {fmtPct(backlog.yoyPct)}
+                </td>
               </tr>
             );
           })}
+
           {list.length === 0 ? (
             <tr>
               <td colSpan={8} style={{ border: '1px solid #ddd', padding: 14, textAlign: 'center' }}>
@@ -89,7 +112,7 @@ function TanshinKpiTable({ items }) {
 }
 
 export default function TanshinSummaryPage() {
-  const [targetPath, setTargetPath] = useState('G:\\マイドライブ\\python\\tanshin_auto\\pdf');
+  const [targetPath, setTargetPath] = useState(DEFAULT_PATH);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [summary, setSummary] = useState(null);
@@ -155,7 +178,9 @@ export default function TanshinSummaryPage() {
   return (
     <main style={{ maxWidth: 900, margin: '40px auto', fontFamily: 'sans-serif', padding: '0 12px' }}>
       <h1>短信PDFまとめ</h1>
-      <p><Link href="/watchlist">監視銘柄へ戻る</Link></p>
+      <p>
+        <Link href="/watchlist">監視銘柄へ戻る</Link>
+      </p>
 
       <p style={{ color: '#555' }}>
         Gドライブ配下のフォルダを指定して、PDFの棚卸しと数値抽出を行います。
@@ -191,16 +216,24 @@ export default function TanshinSummaryPage() {
             ) : null}
           </ul>
 
-          {summary.items?.length === 0 ? (
+          {(summary.items || []).length === 0 ? (
             <p>PDFが見つかりませんでした。</p>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>ファイル名</th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>パス</th>
-                  <th style={{ textAlign: 'right', borderBottom: '1px solid #ccc', padding: 8 }}>サイズ</th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>更新日</th>
+                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                    ファイル名
+                  </th>
+                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                    パス
+                  </th>
+                  <th style={{ textAlign: 'right', borderBottom: '1px solid #ccc', padding: 8 }}>
+                    サイズ
+                  </th>
+                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                    更新日
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -209,7 +242,9 @@ export default function TanshinSummaryPage() {
                     <td style={{ padding: 8 }}>{item.name}</td>
                     <td style={{ padding: 8, wordBreak: 'break-all' }}>{item.path}</td>
                     <td style={{ padding: 8, textAlign: 'right' }}>{formatBytes(item.size)}</td>
-                    <td style={{ padding: 8 }}>{item.mtime ? new Date(item.mtime).toLocaleString() : '-'}</td>
+                    <td style={{ padding: 8 }}>
+                      {item.mtime ? new Date(item.mtime).toLocaleString() : '-'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -221,7 +256,9 @@ export default function TanshinSummaryPage() {
       {summary && (summary.items || []).length > 0 ? (
         <section style={{ marginTop: 32 }}>
           <h2>数値抽出</h2>
-          <p style={{ color: '#555' }}>PDF本文から売上、営業利益、受注高、受注残と増加率を推定します。欠損はハイフン表示です。</p>
+          <p style={{ color: '#555' }}>
+            PDF本文から売上、営業利益、受注高、受注残と増加率を推定します。欠損はハイフン表示です。
+          </p>
 
           <button
             type="button"
@@ -235,7 +272,7 @@ export default function TanshinSummaryPage() {
           {extractResults ? (
             <div style={{ marginTop: 20 }}>
               <p>対象件数:{extractResults.totalCount}。最大:{extractResults.maxFiles}。</p>
-              <TanshinKpiTable items={extractResults.items || []} />
+              <TanshinKpiTable rows={extractResults.items || []} />
             </div>
           ) : null}
         </section>
