@@ -49,6 +49,8 @@ export default function WatchlistPage() {
       <h1>監視銘柄の登録</h1>
       <p>
         <Link href="/disclosures">開示一覧へ</Link>
+        {' | '}
+        <Link href="/tanshin-summary">短信PDFまとめへ</Link>
       </p>
       <form onSubmit={addItem} style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
         <label>
