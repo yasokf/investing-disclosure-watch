@@ -1,14 +1,6 @@
 const fs = require('fs/promises');
 const path = require('path');
-const loadPdfParse = () => {
-  try {
-    // Defer resolving pdf-parse so build does not fail when dependency is missing locally.
-    // eslint-disable-next-line no-eval
-    return eval('require')('pdf-parse');
-  } catch (error) {
-    return null;
-  }
-};
+const pdfParse = require('pdf-parse');
 
 const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
 const MAX_FILES = 200;
@@ -36,9 +28,7 @@ const normalizeLine = (line) => {
 
 const parseNumbers = (line) => {
   const matches = line.match(/-?\d[\d,]*/g);
-  if (!matches) {
-    return [];
-  }
+  if (!matches) return [];
   return matches
     .map((entry) => Number(entry.replace(/,/g, '')))
     .filter((value) => Number.isFinite(value));
@@ -46,35 +36,23 @@ const parseNumbers = (line) => {
 
 const detectUnit = (lines) => {
   const unitLine = lines.find((line) => line.normalized.includes('単位'));
-  if (!unitLine) {
-    return 'unknown';
-  }
-  if (unitLine.normalized.includes('百万円')) {
-    return '百万円';
-  }
-  if (unitLine.normalized.includes('千円')) {
-    return '千円';
-  }
-  if (unitLine.normalized.includes('億円')) {
-    return '億円';
-  }
+  if (!unitLine) return 'unknown';
+  if (unitLine.normalized.includes('百万円')) return '百万円';
+  if (unitLine.normalized.includes('千円')) return '千円';
+  if (unitLine.normalized.includes('億円')) return '億円';
   return 'unknown';
 };
 
 const findSectionIndices = (lines, keywords) => {
   const indices = [];
   lines.forEach((line, index) => {
-    if (keywords.some((keyword) => line.normalized.includes(keyword))) {
-      indices.push(index);
-    }
+    if (keywords.some((keyword) => line.normalized.includes(keyword))) indices.push(index);
   });
   return indices;
 };
 
 const sliceAround = (lines, indices, radius = 20) => {
-  if (indices.length === 0) {
-    return lines;
-  }
+  if (indices.length === 0) return lines;
   const slices = [];
   indices.forEach((index) => {
     const start = Math.max(index - radius, 0);
@@ -91,23 +69,17 @@ const findForecastLine = (lines, keyword) =>
   lines.find((line) => line.normalized.includes(keyword) && parseNumbers(line.normalized).length >= 1);
 
 const formatEvidence = (line) => {
-  if (!line) {
-    return [];
-  }
+  if (!line) return [];
   return [line.raw].filter(Boolean).slice(0, 2);
 };
 
 const computeYoY = (currentValue, previousValue) => {
-  if (!Number.isFinite(currentValue) || !Number.isFinite(previousValue) || previousValue === 0) {
-    return null;
-  }
+  if (!Number.isFinite(currentValue) || !Number.isFinite(previousValue) || previousValue === 0) return null;
   return ((currentValue - previousValue) / previousValue) * 100;
 };
 
 const computeProgress = (currentValue, forecastValue) => {
-  if (!Number.isFinite(currentValue) || !Number.isFinite(forecastValue) || forecastValue === 0) {
-    return null;
-  }
+  if (!Number.isFinite(currentValue) || !Number.isFinite(forecastValue) || forecastValue === 0) return null;
   return (currentValue / forecastValue) * 100;
 };
 
@@ -128,8 +100,7 @@ const extractMetricsFromText = (text) => {
   const forecastLines = sliceAround(lines, forecastSection, 25);
 
   const salesLine = findMetricLine(performanceLines, '売上高') || findMetricLine(lines, '売上高');
-  const opLine =
-    findMetricLine(performanceLines, '営業利益') || findMetricLine(lines, '営業利益');
+  const opLine = findMetricLine(performanceLines, '営業利益') || findMetricLine(lines, '営業利益');
 
   const salesNumbers = salesLine ? parseNumbers(salesLine.normalized) : [];
   const opNumbers = opLine ? parseNumbers(opLine.normalized) : [];
@@ -144,17 +115,14 @@ const extractMetricsFromText = (text) => {
   const forecastOpLine =
     findForecastLine(forecastLines, '営業利益') || findForecastLine(lines, '営業利益');
 
-  const forecastSales = forecastSalesLine
-    ? parseNumbers(forecastSalesLine.normalized)[0] ?? null
-    : null;
-  const forecastOp = forecastOpLine ? parseNumbers(forecastOpLine.normalized)[0] ?? null : null;
+  const forecastSales = forecastSalesLine ? (parseNumbers(forecastSalesLine.normalized)[0] ?? null) : null;
+  const forecastOp = forecastOpLine ? (parseNumbers(forecastOpLine.normalized)[0] ?? null) : null;
 
   const backlogCandidates = lines.filter((line) =>
     ['受注残高合計', '受注残高', '受注残'].some((keyword) => line.normalized.includes(keyword))
   );
   const backlogLine =
-    backlogCandidates.find((line) => line.normalized.includes('受注残高')) ||
-    backlogCandidates[0];
+    backlogCandidates.find((line) => line.normalized.includes('受注残高')) || backlogCandidates[0];
   const backlogNumbers = backlogLine ? parseNumbers(backlogLine.normalized) : [];
   const backlogValue = backlogNumbers[0] ?? null;
   const backlogPrevious = backlogNumbers[1] ?? null;
@@ -177,57 +145,25 @@ const extractMetricsFromText = (text) => {
   };
 
   let confidence = 0;
-  if (Number.isFinite(salesCurrent) && Number.isFinite(salesPrevious)) {
-    confidence += 0.6;
-  }
-  if (Number.isFinite(opCurrent) && Number.isFinite(opPrevious)) {
-    confidence += 0.6;
-  }
-  if (Number.isFinite(forecastSales) || Number.isFinite(forecastOp)) {
-    confidence += 0.1;
-  }
-  if (Number.isFinite(backlogValue)) {
-    confidence += 0.1;
-  }
+  if (Number.isFinite(salesCurrent) && Number.isFinite(salesPrevious)) confidence += 0.6;
+  if (Number.isFinite(opCurrent) && Number.isFinite(opPrevious)) confidence += 0.6;
+  if (Number.isFinite(forecastSales) || Number.isFinite(forecastOp)) confidence += 0.1;
+  if (Number.isFinite(backlogValue)) confidence += 0.1;
   confidence = Math.min(confidence, 1);
 
   const evidenceCount = Object.values(evidence).flat().length;
-  if (evidenceCount === 0) {
-    confidence = Math.min(confidence, 0.2);
-  }
+  if (evidenceCount === 0) confidence = Math.min(confidence, 0.2);
 
   return {
     status: 'ok',
     unit,
     metrics: {
-      sales: {
-        value: salesCurrent,
-        previous: salesPrevious,
-        yoyPct: computeYoY(salesCurrent, salesPrevious)
-      },
-      op: {
-        value: opCurrent,
-        previous: opPrevious,
-        yoyPct: computeYoY(opCurrent, opPrevious)
-      },
-      orders: {
-        value: ordersValue,
-        previous: ordersPrevious,
-        yoyPct: computeYoY(ordersValue, ordersPrevious)
-      },
-      backlog: {
-        value: backlogValue,
-        previous: backlogPrevious,
-        yoyPct: computeYoY(backlogValue, backlogPrevious)
-      },
-      forecast: {
-        sales: forecastSales,
-        operatingProfit: forecastOp
-      },
-      progress: {
-        salesPct: computeProgress(salesCurrent, forecastSales),
-        opPct: computeProgress(opCurrent, forecastOp)
-      }
+      sales: { value: salesCurrent, previous: salesPrevious, yoyPct: computeYoY(salesCurrent, salesPrevious) },
+      op: { value: opCurrent, previous: opPrevious, yoyPct: computeYoY(opCurrent, opPrevious) },
+      orders: { value: ordersValue, previous: ordersPrevious, yoyPct: computeYoY(ordersValue, ordersPrevious) },
+      backlog: { value: backlogValue, previous: backlogPrevious, yoyPct: computeYoY(backlogValue, backlogPrevious) },
+      forecast: { sales: forecastSales, operatingProfit: forecastOp },
+      progress: { salesPct: computeProgress(salesCurrent, forecastSales), opPct: computeProgress(opCurrent, forecastOp) }
     },
     evidence,
     confidence: Number(confidence.toFixed(2))
@@ -238,7 +174,7 @@ const readCache = async () => {
   try {
     const content = await fs.readFile(CACHE_PATH, 'utf-8');
     return JSON.parse(content);
-  } catch (error) {
+  } catch {
     return {};
   }
 };
@@ -257,9 +193,7 @@ const collectPdfFiles = async (rootPath) => {
     const entries = await fs.readdir(currentDir, { withFileTypes: true });
 
     for (const entry of entries) {
-      if (results.length >= MAX_FILES) {
-        break;
-      }
+      if (results.length >= MAX_FILES) break;
 
       const fullPath = path.join(currentDir, entry.name);
 
@@ -268,9 +202,7 @@ const collectPdfFiles = async (rootPath) => {
         continue;
       }
 
-      if (entry.isFile() && entry.name.toLowerCase().endsWith('.pdf')) {
-        results.push(fullPath);
-      }
+      if (entry.isFile() && entry.name.toLowerCase().endsWith('.pdf')) results.push(fullPath);
     }
   }
 
@@ -280,15 +212,9 @@ const collectPdfFiles = async (rootPath) => {
 const extractFromFile = async (filePath, cache) => {
   const stats = await fs.stat(filePath);
   const cached = cache[filePath];
-  if (cached && cached.mtimeMs === stats.mtimeMs) {
-    return { ...cached.result, cached: true };
-  }
+  if (cached && cached.mtimeMs === stats.mtimeMs) return { ...cached.result, cached: true };
 
   try {
-    const pdfParse = loadPdfParse();
-    if (!pdfParse) {
-      throw new Error('pdf-parse is not installed');
-    }
     const buffer = await fs.readFile(filePath);
     const data = await pdfParse(buffer);
     const parsed = extractMetricsFromText(data.text || '');
@@ -329,7 +255,6 @@ export default async function handler(req, res) {
   }
 
   const { path: targetPath } = req.body || {};
-
   if (!targetPath || typeof targetPath !== 'string') {
     res.status(400).json({ error: 'path is required' });
     return;
@@ -342,14 +267,18 @@ export default async function handler(req, res) {
 
   try {
     await fs.access(targetPath);
+
+    const stat = await fs.stat(targetPath);
+    if (!stat.isDirectory()) {
+      res.status(400).json({ error: 'path is not a directory' });
+      return;
+    }
+
     const files = await collectPdfFiles(targetPath);
     const cache = await readCache();
 
     const results = [];
-    for (const filePath of files) {
-      const result = await extractFromFile(filePath, cache);
-      results.push(result);
-    }
+    for (const filePath of files) results.push(await extractFromFile(filePath, cache));
 
     await writeCache(cache);
 

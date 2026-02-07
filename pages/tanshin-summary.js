@@ -2,100 +2,98 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 const formatBytes = (bytes) => {
-  if (!bytes) {
-    return '0 B';
-  }
+  if (!bytes) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB'];
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / Math.pow(1024, index);
   return `${value.toFixed(1)} ${units[index]}`;
 };
 
-const fmtNum = (value) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return '-';
-  }
-  return Number(value).toLocaleString();
+const fmtNum = (v) => {
+  if (v === null || v === undefined || Number.isNaN(v)) return '-';
+  const n = Number(v);
+  if (Number.isNaN(n)) return '-';
+  return n.toLocaleString('ja-JP');
 };
 
-const fmtPct = (value) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return '-';
-  }
-  return `${Number(value).toFixed(1)}%`;
+const fmtPct = (v) => {
+  if (v === null || v === undefined || Number.isNaN(v)) return '-';
+  const n = Number(v);
+  if (Number.isNaN(n)) return '-';
+  return `${n.toFixed(1)}%`;
 };
 
-const TanshinKpiTable = ({ rows }) => {
+function TanshinKpiTable({ items }) {
+  const list = items || [];
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ccc' }}>
-      <thead>
-        <tr>
-          {[
-            '売上',
-            '営業利益',
-            '売上増加率',
-            '営業利益増加率',
-            '受注高',
-            '受注残',
-            '受注高増加率',
-            '受注残増加率'
-          ].map((label) => (
-            <th
-              key={label}
-              style={{
-                textAlign: 'center',
-                borderBottom: '1px solid #ccc',
-                borderRight: '1px solid #ccc',
-                padding: 8
-              }}
-            >
-              {label}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const metrics = row.metrics || {};
-          return (
-            <tr key={row.path}>
-              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
-                {fmtNum(metrics.sales?.value)}
-              </td>
-              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
-                {fmtNum(metrics.op?.value)}
-              </td>
-              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
-                {fmtPct(metrics.sales?.yoyPct)}
-              </td>
-              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
-                {fmtPct(metrics.op?.yoyPct)}
-              </td>
-              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
-                {fmtNum(metrics.orders?.value)}
-              </td>
-              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
-                {fmtNum(metrics.backlog?.value)}
-              </td>
-              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
-                {fmtPct(metrics.orders?.yoyPct)}
-              </td>
-              <td style={{ textAlign: 'right', padding: 8 }}>
-                {fmtPct(metrics.backlog?.yoyPct)}
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900 }}>
+        <thead>
+          <tr>
+            {[
+              '売上',
+              '営業利益',
+              '売上増加率',
+              '営業利益増加率',
+              '受注高',
+              '受注残',
+              '受注高増加率',
+              '受注残増加率'
+            ].map((h) => (
+              <th
+                key={h}
+                style={{
+                  border: '1px solid #ddd',
+                  padding: '10px 12px',
+                  background: '#f5f5f5',
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {list.map((r) => {
+            const m = r.metrics || {};
+            const sales = m.sales || {};
+            const op = m.op || {};
+            const orders = m.orders || {};
+            const backlog = m.backlog || {};
+            return (
+              <tr key={r.path || r.name || r.filePath}>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtNum(sales.value)}</td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtNum(op.value)}</td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtPct(sales.yoyPct)}</td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtPct(op.yoyPct)}</td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtNum(orders.value)}</td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtNum(backlog.value)}</td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtPct(orders.yoyPct)}</td>
+                <td style={{ border: '1px solid #ddd', padding: '10px 12px', textAlign: 'right' }}>{fmtPct(backlog.yoyPct)}</td>
+              </tr>
+            );
+          })}
+          {list.length === 0 ? (
+            <tr>
+              <td colSpan={8} style={{ border: '1px solid #ddd', padding: 14, textAlign: 'center' }}>
+                データがありません
               </td>
             </tr>
-          );
-        })}
-      </tbody>
-    </table>
+          ) : null}
+        </tbody>
+      </table>
+    </div>
   );
-};
+}
 
 export default function TanshinSummaryPage() {
   const [targetPath, setTargetPath] = useState('G:\\マイドライブ\\python\\tanshin_auto\\pdf');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [summary, setSummary] = useState(null);
+
   const [extractLoading, setExtractLoading] = useState(false);
   const [extractError, setExtractError] = useState('');
   const [extractResults, setExtractResults] = useState(null);
@@ -155,14 +153,12 @@ export default function TanshinSummaryPage() {
   };
 
   return (
-    <main style={{ maxWidth: 840, margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <main style={{ maxWidth: 900, margin: '40px auto', fontFamily: 'sans-serif', padding: '0 12px' }}>
       <h1>短信PDFまとめ</h1>
-      <p>
-        <Link href="/watchlist">監視銘柄へ戻る</Link>
-      </p>
+      <p><Link href="/watchlist">監視銘柄へ戻る</Link></p>
+
       <p style={{ color: '#555' }}>
-        G:\\マイドライブ\\python\\tanshin_auto\\pdf からアクセスできるフォルダを指定して、
-        配下にあるPDFの一覧とサマリーを取得します。
+        Gドライブ配下のフォルダを指定して、PDFの棚卸しと数値抽出を行います。
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
@@ -187,45 +183,33 @@ export default function TanshinSummaryPage() {
         <section>
           <h2>サマリー</h2>
           <ul>
-            <li>対象パス: {summary.path}</li>
-            <li>PDF件数: {summary.totalCount}</li>
-            <li>合計サイズ: {formatBytes(summary.totalSize)}</li>
+            <li>対象パス:{summary.path}</li>
+            <li>PDF件数:{summary.totalCount}</li>
+            <li>合計サイズ:{formatBytes(summary.totalSize)}</li>
             {summary.totalCount >= summary.maxFiles ? (
-              <li style={{ color: '#b45309' }}>
-                最大 {summary.maxFiles} 件まで表示しています。
-              </li>
+              <li style={{ color: '#b45309' }}>最大{summary.maxFiles}件まで表示しています。</li>
             ) : null}
           </ul>
 
-          {summary.items.length === 0 ? (
+          {summary.items?.length === 0 ? (
             <p>PDFが見つかりませんでした。</p>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
-                    ファイル名
-                  </th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
-                    パス
-                  </th>
-                  <th style={{ textAlign: 'right', borderBottom: '1px solid #ccc', padding: 8 }}>
-                    サイズ
-                  </th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
-                    更新日
-                  </th>
+                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>ファイル名</th>
+                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>パス</th>
+                  <th style={{ textAlign: 'right', borderBottom: '1px solid #ccc', padding: 8 }}>サイズ</th>
+                  <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>更新日</th>
                 </tr>
               </thead>
               <tbody>
-                {summary.items.map((item) => (
+                {(summary.items || []).map((item) => (
                   <tr key={item.path}>
                     <td style={{ padding: 8 }}>{item.name}</td>
                     <td style={{ padding: 8, wordBreak: 'break-all' }}>{item.path}</td>
                     <td style={{ padding: 8, textAlign: 'right' }}>{formatBytes(item.size)}</td>
-                    <td style={{ padding: 8 }}>
-                      {item.mtime ? new Date(item.mtime).toLocaleString() : '-'}
-                    </td>
+                    <td style={{ padding: 8 }}>{item.mtime ? new Date(item.mtime).toLocaleString() : '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -234,12 +218,11 @@ export default function TanshinSummaryPage() {
         </section>
       ) : null}
 
-      {summary && summary.items.length > 0 ? (
+      {summary && (summary.items || []).length > 0 ? (
         <section style={{ marginTop: 32 }}>
           <h2>数値抽出</h2>
-          <p style={{ color: '#555' }}>
-            売上高・営業利益・進捗率などをPDF本文から推定します。根拠行と信頼度も表示します。
-          </p>
+          <p style={{ color: '#555' }}>PDF本文から売上、営業利益、受注高、受注残と増加率を推定します。欠損はハイフン表示です。</p>
+
           <button
             type="button"
             onClick={handleExtract}
@@ -251,38 +234,8 @@ export default function TanshinSummaryPage() {
 
           {extractResults ? (
             <div style={{ marginTop: 20 }}>
-              <p>
-                対象件数: {extractResults.totalCount} / 最大 {extractResults.maxFiles}
-              </p>
-              <div style={{ display: 'grid', gap: 12 }}>
-                {extractResults.items.map((item) => (
-                  <div key={item.path}>
-                    <TanshinKpiTable rows={[item]} />
-                    <div style={{ marginTop: 4, fontSize: 12, color: '#555' }}>
-                      {item.name}
-                    </div>
-                    {item.evidence ? (
-                      <details style={{ marginTop: 6 }}>
-                        <summary>根拠</summary>
-                        <ul style={{ margin: '8px 0', paddingLeft: 16 }}>
-                          {(item.evidence?.sales || []).map((line) => (
-                            <li key={`sales-${line}`}>売上: {line}</li>
-                          ))}
-                          {(item.evidence?.operatingProfit || []).map((line) => (
-                            <li key={`op-${line}`}>営業利益: {line}</li>
-                          ))}
-                          {(item.evidence?.orders || []).map((line) => (
-                            <li key={`orders-${line}`}>受注高: {line}</li>
-                          ))}
-                          {(item.evidence?.backlog || []).map((line) => (
-                            <li key={`backlog-${line}`}>受注残: {line}</li>
-                          ))}
-                        </ul>
-                      </details>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
+              <p>対象件数:{extractResults.totalCount}。最大:{extractResults.maxFiles}。</p>
+              <TanshinKpiTable items={extractResults.items || []} />
             </div>
           ) : null}
         </section>
