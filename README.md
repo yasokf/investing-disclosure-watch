@@ -14,9 +14,14 @@ npm install
 npm run dev
 ```
 
-ブラウザで `http://localhost:3000/watchlist` を開いてください。
+ブラウザで `http://localhost:3000/` を開いてください。
+トップページから各機能への導線があります。
+
+Windowsでは `start.bat` をダブルクリックすると `npm install` の後に `npm run dev` を実行し、
+ブラウザを開きます。
 
 - 監視銘柄の追加・削除: `/watchlist`
 - 開示一覧: `/disclosures`
+- 短信PDFまとめ: `/tanshin-summary`
 
 初回起動時にJSONファイル（`data.json`）が作成され、監視銘柄が保存されます。

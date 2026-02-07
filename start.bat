@@ -1,0 +1,12 @@
+@echo off
+setlocal
+cd /d %~dp0
+
+if not exist node_modules (
+  echo Installing dependencies...
+  npm install
+)
+
+start "" http://localhost:3000/
+echo Starting development server...
+npm run dev
