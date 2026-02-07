@@ -3,6 +3,15 @@ const path = require('path');
 
 const MAX_FILES = 500;
 
+const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
+
+const isWithinAllowedRoots = (targetPath) => {
+  const resolvedTarget = path.resolve(targetPath);
+  const resolvedRoot = path.resolve(BASE_DIR);
+  const relative = path.relative(resolvedRoot, resolvedTarget);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+};
+
 const formatEntry = (entryPath, stats) => ({
   path: entryPath,
   name: path.basename(entryPath),
@@ -50,6 +59,11 @@ export default async function handler(req, res) {
 
   if (!targetPath || typeof targetPath !== 'string') {
     res.status(400).json({ error: 'path is required' });
+    return;
+  }
+
+  if (!isWithinAllowedRoots(targetPath)) {
+    res.status(400).json({ error: 'path is outside of allowed roots' });
     return;
   }
 
