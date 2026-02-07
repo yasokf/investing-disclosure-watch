@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 const fmtNum = (v) => {
   if (v === null || v === undefined || Number.isNaN(v)) return '-';
   const n = Number(v);
@@ -91,5 +93,103 @@ function TanshinKpiTable({ rows }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+export default function TanshinSummaryPage() {
+  const [status, setStatus] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUpload = async (event) => {
+    event.preventDefault();
+    const fileList = [
+      ...(event.target.elements.pdfs?.files ? Array.from(event.target.elements.pdfs.files) : []),
+      ...(event.target.elements.folder?.files ? Array.from(event.target.elements.folder.files) : [])
+    ];
+    if (fileList.length === 0) {
+      setStatus('PDFファイルまたはフォルダを選択してください。');
+      return;
+    }
+
+    setIsUploading(true);
+    setStatus('アップロード中...');
+
+    try {
+      const files = await Promise.all(
+        fileList.map(
+          (file) =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64 = String(reader.result).split(',')[1] || '';
+                resolve({
+                  filename: file.name,
+                  relativePath: file.webkitRelativePath || '',
+                  data: base64
+                });
+              };
+              reader.onerror = () => reject(new Error('read failed'));
+              reader.readAsDataURL(file);
+            })
+        )
+      );
+      const response = await fetch('/api/tanshin-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          files,
+          runAnalyze: event.target.elements.autoAnalyze?.checked === true
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || 'upload failed');
+      }
+      const analysisStatus = payload.analysis?.ok
+        ? '解析完了'
+        : payload.analysis
+        ? '解析エラー'
+        : '解析は未実行';
+      setStatus(
+        `アップロード完了: ${payload.saved.join(', ')} / ${analysisStatus}`
+      );
+    } catch (error) {
+      setStatus(`アップロード失敗: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <main style={{ padding: 24 }}>
+      <h1>Tanshin Summary</h1>
+      <p>このページは決算短信のサマリーを表示します。</p>
+      <section style={{ marginTop: 16, marginBottom: 24 }}>
+        <h2 style={{ marginBottom: 8 }}>PDF取り込み &amp; 自動解析</h2>
+        <form onSubmit={handleUpload}>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ marginRight: 8 }}>
+              PDFファイル:
+              <input type="file" name="pdfs" accept="application/pdf" multiple />
+            </label>
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ marginRight: 8 }}>
+              フォルダ選択:
+              <input type="file" name="folder" webkitdirectory="true" directory="true" />
+            </label>
+          </div>
+          <label style={{ marginRight: 12 }}>
+            <input type="checkbox" name="autoAnalyze" defaultChecked />
+            アップロード後に解析を実行する
+          </label>
+          <button type="submit" disabled={isUploading} style={{ marginLeft: 8 }}>
+            {isUploading ? 'アップロード中...' : 'アップロード'}
+          </button>
+        </form>
+        {status ? <p style={{ marginTop: 8 }}>{status}</p> : null}
+      </section>
+      <TanshinKpiTable rows={[]} />
+    </main>
   );
 }
