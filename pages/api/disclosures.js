@@ -1,5 +1,4 @@
 const { getWatchlist } = require('../../lib/db');
-const crypto = require('crypto');
 
 const getDateString = () => {
   const now = new Date();
@@ -31,15 +30,6 @@ const normalizePdfUrl = (value) => {
 
 const normalizeCode = (value) => String(value ?? '').trim();
 
-const buildDisclosureId = ({ date, time, code, title }) => {
-  const hash = crypto
-    .createHash('sha1')
-    .update(`${date}|${time}|${code}|${title}`)
-    .digest('hex')
-    .slice(0, 12);
-  return `${date}-${time}-${code}-${hash}`;
-};
-
 const parseDisclosures = (html) => {
   const items = [];
   const rowMatches = html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g);
@@ -55,14 +45,13 @@ const parseDisclosures = (html) => {
       const url = normalizePdfUrl(titleCell);
       if (date && time && code && title) {
         items.push({
-          id: buildDisclosureId({ date, time, code, title }),
+          id: `${date}-${time}-${code}-${title}`,
           date,
           time,
           code,
           company,
           title,
           url,
-          published_at: `${date} ${time}`,
         });
       }
     }

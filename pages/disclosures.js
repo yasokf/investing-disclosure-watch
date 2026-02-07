@@ -33,9 +33,6 @@ export default function DisclosureListPage() {
                 コード
               </th>
               <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
-                会社名
-              </th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
                 タイトル
               </th>
               <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
@@ -50,7 +47,6 @@ export default function DisclosureListPage() {
                   {item.date} {item.time}
                 </td>
                 <td style={{ padding: 8 }}>{item.code}</td>
-                <td style={{ padding: 8 }}>{item.company}</td>
                 <td style={{ padding: 8 }}>
                   {item.url ? (
                     <a href={item.url} target="_blank" rel="noopener noreferrer">
@@ -62,7 +58,9 @@ export default function DisclosureListPage() {
                 </td>
                 <td style={{ padding: 8 }}>
                   {item.url ? (
-                    <Link href={`/pdf?u=${encodeURIComponent(item.url)}`}>内容を見る</Link>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      PDF
+                    </a>
                   ) : (
                     ''
                   )}
