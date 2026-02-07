@@ -31,3 +31,63 @@ npm run dev
 停止は `stop_app.cmd` をダブルクリックしてください。
 
 初回起動時にJSONファイル（`data.json`）が作成され、監視銘柄が保存されます。
+
+---
+
+# 日本株 決算短信PDF 自動解析ツール
+
+ローカルに保存した決算短信PDFを `input/` に置くだけで、`output/` にTSV/JSON/ログを生成する
+デスクトップ向けの簡易解析ツールを同梱しています。Windowsでも動作するように、パスと文字コードは
+UTF-8前提で統一しています。
+
+## 前提条件
+
+- Python 3.11+
+
+## セットアップ
+
+```bash
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -e .[dev]
+```
+
+## 使い方
+
+### 一括処理
+
+```bash
+python -m ta batch
+```
+
+### 監視モード
+
+```bash
+python -m ta watch
+```
+
+`input/` フォルダに新しいPDFが追加されたら、自動で解析を実行します。
+
+### 出力
+
+- `output/{ファイル名}.tsv`: 1行11列（A〜K）で出力。C〜K列はダブルクォートで囲みます。
+- `output/{ファイル名}.json`: 各項目に `page` と `snippet` の抽出根拠、`notes`、`confidence` を含むJSONです。
+- `output/{ファイル名}.log`: 処理ログ。
+- `output/.done.json`: 処理済みのハッシュ一覧（重複防止）。
+
+### PDF取り込み
+
+`/tanshin-summary` 画面からPDFをアップロードすると、`input/` フォルダに保存されます。
+そのまま `python -m ta batch` で一括処理するか、`python -m ta watch` で自動処理できます。
+
+## 抽出ルールについて
+
+現在は骨組みを優先し、抽出ルールは最小限です。抽出できない項目は `不明` にし、
+`notes` に理由を書き、`confidence` を低くしています。OCRは入れていませんが、
+将来拡張できるように抽出ロジックを分離しています。
+
+## テスト
+
+```bash
+pytest
+```
