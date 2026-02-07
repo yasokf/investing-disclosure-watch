@@ -16,12 +16,16 @@ export default function TanshinSummaryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [summary, setSummary] = useState(null);
+  const [extractLoading, setExtractLoading] = useState(false);
+  const [extractError, setExtractError] = useState('');
+  const [extractResults, setExtractResults] = useState(null);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     setError('');
     setSummary(null);
+    setExtractResults(null);
 
     try {
       const res = await fetch('/api/tanshin-summary', {
@@ -42,6 +46,46 @@ export default function TanshinSummaryPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExtract = async () => {
+    setExtractLoading(true);
+    setExtractError('');
+    setExtractResults(null);
+
+    try {
+      const res = await fetch('/api/tanshin-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: targetPath })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setExtractError(data.error || '抽出に失敗しました');
+        return;
+      }
+
+      setExtractResults(data);
+    } catch (fetchError) {
+      setExtractError(fetchError.message);
+    } finally {
+      setExtractLoading(false);
+    }
+  };
+
+  const formatNumber = (value) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return '-';
+    }
+    return Number(value).toLocaleString();
+  };
+
+  const formatPercent = (value) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return '-';
+    }
+    return `${Number(value).toFixed(1)}%`;
   };
 
   return (
@@ -71,6 +115,7 @@ export default function TanshinSummaryPage() {
       </form>
 
       {error ? <p style={{ color: 'crimson' }}>{error}</p> : null}
+      {extractError ? <p style={{ color: 'crimson' }}>{extractError}</p> : null}
 
       {summary ? (
         <section>
@@ -120,6 +165,114 @@ export default function TanshinSummaryPage() {
               </tbody>
             </table>
           )}
+        </section>
+      ) : null}
+
+      {summary && summary.items.length > 0 ? (
+        <section style={{ marginTop: 32 }}>
+          <h2>数値抽出</h2>
+          <p style={{ color: '#555' }}>
+            売上高・営業利益・進捗率などをPDF本文から推定します。根拠行と信頼度も表示します。
+          </p>
+          <button
+            type="button"
+            onClick={handleExtract}
+            style={{ padding: '8px 16px', width: 180 }}
+            disabled={extractLoading}
+          >
+            {extractLoading ? '抽出中...' : '抽出を実行'}
+          </button>
+
+          {extractResults ? (
+            <div style={{ marginTop: 20 }}>
+              <p>
+                対象件数: {extractResults.totalCount} / 最大 {extractResults.maxFiles}
+              </p>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                      ファイル名
+                    </th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                      売上高 (当期/前期/差%/進捗%)
+                    </th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                      営業利益 (当期/前期/差%/進捗%)
+                    </th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                      受注残
+                    </th>
+                    <th style={{ textAlign: 'right', borderBottom: '1px solid #ccc', padding: 8 }}>
+                      信頼度
+                    </th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                      Evidence
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {extractResults.items.map((item) => (
+                    <tr key={item.filePath}>
+                      <td style={{ padding: 8 }}>{item.fileName}</td>
+                      <td style={{ padding: 8 }}>
+                        {item.metrics ? (
+                          <>
+                            {formatNumber(item.metrics.sales.current)} /{' '}
+                            {formatNumber(item.metrics.sales.previous)} /{' '}
+                            {formatPercent(item.metrics.sales.yoyPct)} /{' '}
+                            {formatPercent(item.metrics.sales.progressPct)}
+                          </>
+                        ) : (
+                          item.status
+                        )}
+                      </td>
+                      <td style={{ padding: 8 }}>
+                        {item.metrics ? (
+                          <>
+                            {formatNumber(item.metrics.operatingProfit.current)} /{' '}
+                            {formatNumber(item.metrics.operatingProfit.previous)} /{' '}
+                            {formatPercent(item.metrics.operatingProfit.yoyPct)} /{' '}
+                            {formatPercent(item.metrics.operatingProfit.progressPct)}
+                          </>
+                        ) : (
+                          item.status
+                        )}
+                      </td>
+                      <td style={{ padding: 8 }}>
+                        {item.metrics ? formatNumber(item.metrics.backlog) : '-'}
+                      </td>
+                      <td style={{ padding: 8, textAlign: 'right' }}>
+                        {item.confidence?.toFixed ? item.confidence.toFixed(2) : '-'}
+                      </td>
+                      <td style={{ padding: 8 }}>
+                        <details>
+                          <summary>根拠</summary>
+                          <ul style={{ margin: '8px 0', paddingLeft: 16 }}>
+                            {(item.evidence?.sales || []).map((line) => (
+                              <li key={`sales-${line}`}>売上: {line}</li>
+                            ))}
+                            {(item.evidence?.operatingProfit || []).map((line) => (
+                              <li key={`op-${line}`}>営業利益: {line}</li>
+                            ))}
+                            {(item.evidence?.forecastSales || []).map((line) => (
+                              <li key={`fs-${line}`}>通期売上予想: {line}</li>
+                            ))}
+                            {(item.evidence?.forecastOperatingProfit || []).map((line) => (
+                              <li key={`fo-${line}`}>通期営業利益予想: {line}</li>
+                            ))}
+                            {(item.evidence?.backlog || []).map((line) => (
+                              <li key={`backlog-${line}`}>受注残: {line}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </section>
       ) : null}
     </main>

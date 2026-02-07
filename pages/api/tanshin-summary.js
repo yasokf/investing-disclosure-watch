@@ -2,15 +2,13 @@ const fs = require('fs/promises');
 const path = require('path');
 
 const MAX_FILES = 500;
-const ALLOWED_ROOTS = ['G:\\マイドライブ\\python\\tanshin_auto\\pdf'];
+const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
 
 const isWithinAllowedRoots = (targetPath) => {
   const resolvedTarget = path.resolve(targetPath);
-  return ALLOWED_ROOTS.some((root) => {
-    const resolvedRoot = path.resolve(root);
-    const relative = path.relative(resolvedRoot, resolvedTarget);
-    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-  });
+  const resolvedRoot = path.resolve(BASE_DIR);
+  const relative = path.relative(resolvedRoot, resolvedTarget);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 };
 
 const formatEntry = (entryPath, stats) => ({
