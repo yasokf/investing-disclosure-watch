@@ -16,17 +16,33 @@ const stripTags = (value) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+const normalizePdfUrl = (value) => {
+  const match = value.match(/href="([^"]+)"/i);
+  if (!match) {
+    return '';
+  }
+  try {
+    return new URL(match[1], 'https://www.release.tdnet.info').toString();
+  } catch (error) {
+    return match[1];
+  }
+};
+
 const parseDisclosures = (html) => {
   const items = [];
   const rowMatches = html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g);
   for (const match of rowMatches) {
-    const cells = [...match[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((cell) =>
-      stripTags(cell[1])
-    );
-    if (cells.length >= 4) {
-      const [date, time, code, title] = cells;
+    const cells = [...match[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((cell) => cell[1]);
+    if (cells.length >= 5) {
+      const [dateCell, timeCell, codeCell, companyCell, titleCell] = cells;
+      const date = stripTags(dateCell);
+      const time = stripTags(timeCell);
+      const code = stripTags(codeCell);
+      const company = stripTags(companyCell);
+      const title = stripTags(titleCell);
+      const url = normalizePdfUrl(titleCell);
       if (date && time && code && title) {
-        items.push({ date, time, code, title });
+        items.push({ date, time, code, company, title, url });
       }
     }
   }

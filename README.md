@@ -14,6 +14,8 @@ npm install
 npm run dev
 ```
 
+Windowsは `start-dev.bat` をダブルクリックで起動してください。
+
 ブラウザで `http://localhost:3000/watchlist` を開いてください。
 
 - 監視銘柄の追加・削除: `/watchlist`
