@@ -29,8 +29,18 @@ export default function DisclosureListPage() {
               <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
                 日時
               </th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>コード</th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>タイトル</th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                コード
+              </th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                会社名
+              </th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                タイトル
+              </th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                PDF
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -40,18 +50,15 @@ export default function DisclosureListPage() {
                   {item.date} {item.time}
                 </td>
                 <td style={{ padding: 8 }}>{item.code}</td>
+                <td style={{ padding: 8 }}>{item.company}</td>
+                <td style={{ padding: 8 }}>{item.title}</td>
                 <td style={{ padding: 8 }}>
                   {item.url ? (
-                    <>
-                      <a href={item.url} target="_blank" rel="noreferrer">
-                        {item.title}
-                      </a>{' '}
-                      <a href={item.url} target="_blank" rel="noreferrer">
-                        PDF
-                      </a>
-                    </>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      PDF
+                    </a>
                   ) : (
-                    item.title
+                    ''
                   )}
                 </td>
               </tr>

@@ -28,6 +28,8 @@ const normalizePdfUrl = (value) => {
   }
 };
 
+const normalizeCode = (value) => String(value ?? '').trim();
+
 const parseDisclosures = (html) => {
   const items = [];
   const rowMatches = html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g);
@@ -62,13 +64,26 @@ export default async function handler(req, res) {
     const html = await response.text();
     let items = parseDisclosures(html);
 
+    let codesWatchlist = [];
+    const codesDisclosuresSample = items.slice(0, 20).map((item) => normalizeCode(item.code));
+
     if (req.query.watchlist === '1') {
       const watchlist = getWatchlist();
-      const codes = new Set(watchlist.map((item) => item.code));
-      items = items.filter((item) => codes.has(item.code));
+      codesWatchlist = watchlist.map((item) => normalizeCode(item.code));
+      const codes = new Set(codesWatchlist);
+      items = items.filter((item) => codes.has(normalizeCode(item.code)));
     }
 
-    res.status(200).json({ items });
+    const responseBody = { items };
+    if (req.query.debug === '1') {
+      responseBody.meta = {
+        codesWatchlist,
+        codesDisclosuresSample,
+        filteredCount: items.length,
+      };
+    }
+
+    res.status(200).json(responseBody);
   } catch (error) {
     res.status(500).json({ error: 'unexpected error' });
   }
