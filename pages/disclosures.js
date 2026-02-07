@@ -51,10 +51,16 @@ export default function DisclosureListPage() {
                 </td>
                 <td style={{ padding: 8 }}>{item.code}</td>
                 <td style={{ padding: 8 }}>{item.company}</td>
-                <td style={{ padding: 8 }}>{item.title}</td>
+                <td style={{ padding: 8 }}>
+                  <Link href={`/disclosures/${item.id}`}>{item.title}</Link>
+                </td>
                 <td style={{ padding: 8 }}>
                   {item.url ? (
-                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={`/api/pdf?url=${encodeURIComponent(item.url)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       PDF
                     </a>
                   ) : (
