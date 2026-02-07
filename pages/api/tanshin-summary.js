@@ -2,10 +2,9 @@ const fs = require('fs/promises');
 const path = require('path');
 
 const MAX_FILES = 500;
-
 const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
 
-const isWithinAllowedRoots = (targetPath) => {
+const isWithinBaseDir = (targetPath) => {
   const resolvedTarget = path.resolve(targetPath);
   const resolvedRoot = path.resolve(BASE_DIR);
   const relative = path.relative(resolvedRoot, resolvedTarget);
@@ -62,15 +61,22 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (!isWithinAllowedRoots(targetPath)) {
-    res.status(400).json({ error: 'path is outside of allowed roots' });
+  if (!isWithinBaseDir(targetPath)) {
+    res.status(400).json({ error: 'path is outside of base dir' });
     return;
   }
 
   try {
     await fs.access(targetPath);
+
+    const stat = await fs.stat(targetPath);
+    if (!stat.isDirectory()) {
+      res.status(400).json({ error: 'path is not a directory' });
+      return;
+    }
+
     const files = await collectPdfFiles(targetPath);
-    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+    const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
 
     res.status(200).json({
       path: targetPath,
@@ -80,9 +86,6 @@ export default async function handler(req, res) {
       items: files
     });
   } catch (error) {
-    res.status(500).json({
-      error: 'failed to read path',
-      detail: error.message
-    });
+    res.status(500).json({ error: 'failed to read path', detail: error.message });
   }
 }

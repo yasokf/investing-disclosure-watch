@@ -330,6 +330,13 @@ export default async function handler(req, res) {
 
   try {
     await fs.access(targetPath);
+
+    const stat = await fs.stat(targetPath);
+    if (!stat.isDirectory()) {
+      res.status(400).json({ error: 'path is not a directory' });
+      return;
+    }
+
     const files = await collectPdfFiles(targetPath);
     const cache = await readCache();
 
