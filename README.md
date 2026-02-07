@@ -14,8 +14,7 @@ npm install
 npm run dev
 ```
 
-Windowsは `start-dev.bat` をダブルクリックで起動してください（開発用）。
-本番ビルド相当で起動したい場合は `start-app.bat` をダブルクリックしてください。
+Windowsは `start-dev.bat` をダブルクリックで起動してください。
 
 ブラウザで `http://localhost:3000/watchlist` を開いてください。
 

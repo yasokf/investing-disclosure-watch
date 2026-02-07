@@ -45,24 +45,24 @@ export default function DisclosureListPage() {
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={`${item.date}-${item.time}-${item.code}-${item.title}`}>
+              <tr key={item.id}>
                 <td style={{ padding: 8 }}>
                   {item.date} {item.time}
                 </td>
                 <td style={{ padding: 8 }}>{item.code}</td>
                 <td style={{ padding: 8 }}>{item.company}</td>
                 <td style={{ padding: 8 }}>
-                  <Link href={`/disclosures/${item.id}`}>{item.title}</Link>
+                  {item.url ? (
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      {item.title}
+                    </a>
+                  ) : (
+                    item.title
+                  )}
                 </td>
                 <td style={{ padding: 8 }}>
                   {item.url ? (
-                    <a
-                      href={`/api/pdf?url=${encodeURIComponent(item.url)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      PDF
-                    </a>
+                    <Link href={`/pdf?u=${encodeURIComponent(item.url)}`}>内容を見る</Link>
                   ) : (
                     ''
                   )}
