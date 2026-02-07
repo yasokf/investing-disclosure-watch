@@ -75,11 +75,6 @@ python -m ta watch
 - `output/{ファイル名}.log`: 処理ログ。
 - `output/.done.json`: 処理済みのハッシュ一覧（重複防止）。
 
-### PDF取り込み
-
-`/tanshin-summary` 画面からPDFをアップロードすると、`input/` フォルダに保存されます。
-そのまま `python -m ta batch` で一括処理するか、`python -m ta watch` で自動処理できます。
-
 ## 抽出ルールについて
 
 現在は骨組みを優先し、抽出ルールは最小限です。抽出できない項目は `不明` にし、
