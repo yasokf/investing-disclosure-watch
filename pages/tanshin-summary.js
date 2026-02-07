@@ -11,6 +11,86 @@ const formatBytes = (bytes) => {
   return `${value.toFixed(1)} ${units[index]}`;
 };
 
+const TanshinKpiTable = ({ rows }) => {
+  const formatNumber = (value) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return '-';
+    }
+    return Number(value).toLocaleString();
+  };
+
+  const formatPercent = (value) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return '-';
+    }
+    return `${Number(value).toFixed(1)}%`;
+  };
+
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ccc' }}>
+      <thead>
+        <tr>
+          {[
+            '売上',
+            '営業利益',
+            '売上増加率',
+            '営業利益増加率',
+            '受注高',
+            '受注残',
+            '受注高増加率',
+            '受注残増加率'
+          ].map((label) => (
+            <th
+              key={label}
+              style={{
+                textAlign: 'center',
+                borderBottom: '1px solid #ccc',
+                borderRight: '1px solid #ccc',
+                padding: 8
+              }}
+            >
+              {label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => {
+          const metrics = row.metrics || {};
+          return (
+            <tr key={row.path}>
+              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
+                {formatNumber(metrics.sales?.value)}
+              </td>
+              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
+                {formatNumber(metrics.op?.value)}
+              </td>
+              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
+                {formatPercent(metrics.sales?.yoyPct)}
+              </td>
+              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
+                {formatPercent(metrics.op?.yoyPct)}
+              </td>
+              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
+                {formatNumber(metrics.orders?.value)}
+              </td>
+              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
+                {formatNumber(metrics.backlog?.value)}
+              </td>
+              <td style={{ textAlign: 'right', borderRight: '1px solid #ccc', padding: 8 }}>
+                {formatPercent(metrics.orders?.yoyPct)}
+              </td>
+              <td style={{ textAlign: 'right', padding: 8 }}>
+                {formatPercent(metrics.backlog?.yoyPct)}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+};
+
 export default function TanshinSummaryPage() {
   const [targetPath, setTargetPath] = useState('G:\\マイドライブ\\python\\tanshin_auto\\pdf');
   const [loading, setLoading] = useState(false);
@@ -72,20 +152,6 @@ export default function TanshinSummaryPage() {
     } finally {
       setExtractLoading(false);
     }
-  };
-
-  const formatNumber = (value) => {
-    if (value === null || value === undefined || Number.isNaN(value)) {
-      return '-';
-    }
-    return Number(value).toLocaleString();
-  };
-
-  const formatPercent = (value) => {
-    if (value === null || value === undefined || Number.isNaN(value)) {
-      return '-';
-    }
-    return `${Number(value).toFixed(1)}%`;
   };
 
   return (
@@ -188,89 +254,35 @@ export default function TanshinSummaryPage() {
               <p>
                 対象件数: {extractResults.totalCount} / 最大 {extractResults.maxFiles}
               </p>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
-                      ファイル名
-                    </th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
-                      売上高 (当期/前期/差%/進捗%)
-                    </th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
-                      営業利益 (当期/前期/差%/進捗%)
-                    </th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
-                      受注残
-                    </th>
-                    <th style={{ textAlign: 'right', borderBottom: '1px solid #ccc', padding: 8 }}>
-                      信頼度
-                    </th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
-                      Evidence
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {extractResults.items.map((item) => (
-                    <tr key={item.filePath}>
-                      <td style={{ padding: 8 }}>{item.fileName}</td>
-                      <td style={{ padding: 8 }}>
-                        {item.metrics ? (
-                          <>
-                            {formatNumber(item.metrics.sales.current)} /{' '}
-                            {formatNumber(item.metrics.sales.previous)} /{' '}
-                            {formatPercent(item.metrics.sales.yoyPct)} /{' '}
-                            {formatPercent(item.metrics.sales.progressPct)}
-                          </>
-                        ) : (
-                          item.status
-                        )}
-                      </td>
-                      <td style={{ padding: 8 }}>
-                        {item.metrics ? (
-                          <>
-                            {formatNumber(item.metrics.operatingProfit.current)} /{' '}
-                            {formatNumber(item.metrics.operatingProfit.previous)} /{' '}
-                            {formatPercent(item.metrics.operatingProfit.yoyPct)} /{' '}
-                            {formatPercent(item.metrics.operatingProfit.progressPct)}
-                          </>
-                        ) : (
-                          item.status
-                        )}
-                      </td>
-                      <td style={{ padding: 8 }}>
-                        {item.metrics ? formatNumber(item.metrics.backlog) : '-'}
-                      </td>
-                      <td style={{ padding: 8, textAlign: 'right' }}>
-                        {item.confidence?.toFixed ? item.confidence.toFixed(2) : '-'}
-                      </td>
-                      <td style={{ padding: 8 }}>
-                        <details>
-                          <summary>根拠</summary>
-                          <ul style={{ margin: '8px 0', paddingLeft: 16 }}>
-                            {(item.evidence?.sales || []).map((line) => (
-                              <li key={`sales-${line}`}>売上: {line}</li>
-                            ))}
-                            {(item.evidence?.operatingProfit || []).map((line) => (
-                              <li key={`op-${line}`}>営業利益: {line}</li>
-                            ))}
-                            {(item.evidence?.forecastSales || []).map((line) => (
-                              <li key={`fs-${line}`}>通期売上予想: {line}</li>
-                            ))}
-                            {(item.evidence?.forecastOperatingProfit || []).map((line) => (
-                              <li key={`fo-${line}`}>通期営業利益予想: {line}</li>
-                            ))}
-                            {(item.evidence?.backlog || []).map((line) => (
-                              <li key={`backlog-${line}`}>受注残: {line}</li>
-                            ))}
-                          </ul>
-                        </details>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {extractResults.items.map((item) => (
+                  <div key={item.path}>
+                    <TanshinKpiTable rows={[item]} />
+                    <div style={{ marginTop: 4, fontSize: 12, color: '#555' }}>
+                      {item.name}
+                    </div>
+                    {item.evidence ? (
+                      <details style={{ marginTop: 6 }}>
+                        <summary>根拠</summary>
+                        <ul style={{ margin: '8px 0', paddingLeft: 16 }}>
+                          {(item.evidence?.sales || []).map((line) => (
+                            <li key={`sales-${line}`}>売上: {line}</li>
+                          ))}
+                          {(item.evidence?.operatingProfit || []).map((line) => (
+                            <li key={`op-${line}`}>営業利益: {line}</li>
+                          ))}
+                          {(item.evidence?.orders || []).map((line) => (
+                            <li key={`orders-${line}`}>受注高: {line}</li>
+                          ))}
+                          {(item.evidence?.backlog || []).map((line) => (
+                            <li key={`backlog-${line}`}>受注残: {line}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
         </section>

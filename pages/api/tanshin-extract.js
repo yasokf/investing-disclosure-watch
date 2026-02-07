@@ -147,14 +147,25 @@ const extractMetricsFromText = (text) => {
   const backlogLine =
     backlogCandidates.find((line) => line.normalized.includes('受注残高')) ||
     backlogCandidates[0];
-  const backlogValue = backlogLine ? parseNumbers(backlogLine.normalized)[0] ?? null : null;
+  const backlogNumbers = backlogLine ? parseNumbers(backlogLine.normalized) : [];
+  const backlogValue = backlogNumbers[0] ?? null;
+  const backlogPrevious = backlogNumbers[1] ?? null;
+
+  const ordersCandidates = lines.filter((line) =>
+    ['受注高', '受注高合計'].some((keyword) => line.normalized.includes(keyword))
+  );
+  const ordersLine = ordersCandidates[0];
+  const ordersNumbers = ordersLine ? parseNumbers(ordersLine.normalized) : [];
+  const ordersValue = ordersNumbers[0] ?? null;
+  const ordersPrevious = ordersNumbers[1] ?? null;
 
   const evidence = {
     sales: formatEvidence(salesLine),
     operatingProfit: formatEvidence(opLine),
     forecastSales: formatEvidence(forecastSalesLine),
     forecastOperatingProfit: formatEvidence(forecastOpLine),
-    backlog: formatEvidence(backlogLine)
+    backlog: formatEvidence(backlogLine),
+    orders: formatEvidence(ordersLine)
   };
 
   let confidence = 0;
@@ -182,21 +193,32 @@ const extractMetricsFromText = (text) => {
     unit,
     metrics: {
       sales: {
-        current: salesCurrent,
+        value: salesCurrent,
         previous: salesPrevious,
-        yoyPct: computeYoY(salesCurrent, salesPrevious),
-        progressPct: computeProgress(salesCurrent, forecastSales)
+        yoyPct: computeYoY(salesCurrent, salesPrevious)
       },
-      operatingProfit: {
-        current: opCurrent,
+      op: {
+        value: opCurrent,
         previous: opPrevious,
-        yoyPct: computeYoY(opCurrent, opPrevious),
-        progressPct: computeProgress(opCurrent, forecastOp)
+        yoyPct: computeYoY(opCurrent, opPrevious)
       },
-      backlog: backlogValue,
+      orders: {
+        value: ordersValue,
+        previous: ordersPrevious,
+        yoyPct: computeYoY(ordersValue, ordersPrevious)
+      },
+      backlog: {
+        value: backlogValue,
+        previous: backlogPrevious,
+        yoyPct: computeYoY(backlogValue, backlogPrevious)
+      },
       forecast: {
         sales: forecastSales,
         operatingProfit: forecastOp
+      },
+      progress: {
+        salesPct: computeProgress(salesCurrent, forecastSales),
+        opPct: computeProgress(opCurrent, forecastOp)
       }
     },
     evidence,
@@ -261,6 +283,8 @@ const extractFromFile = async (filePath, cache) => {
     const result = {
       filePath,
       fileName: path.basename(filePath),
+      name: path.basename(filePath),
+      path: filePath,
       mtime: stats.mtime,
       size: stats.size,
       ...parsed
@@ -271,6 +295,8 @@ const extractFromFile = async (filePath, cache) => {
     const result = {
       filePath,
       fileName: path.basename(filePath),
+      name: path.basename(filePath),
+      path: filePath,
       mtime: stats.mtime,
       size: stats.size,
       status: 'unreadable',
