@@ -19,6 +19,8 @@ export default function DisclosureListPage() {
       <h1>開示一覧</h1>
       <p>
         <Link href="/watchlist">監視銘柄へ戻る</Link>
+        {' | '}
+        <Link href="/tanshin-summary">短信PDFまとめへ</Link>
       </p>
       {items.length === 0 ? (
         <p>開示データがありません。</p>
