@@ -31,8 +31,15 @@ export default function DisclosureListPage() {
               <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
                 日時
               </th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>コード</th>
-              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>タイトル</th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                コード
+              </th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                タイトル
+              </th>
+              <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 8 }}>
+                PDF
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -42,7 +49,24 @@ export default function DisclosureListPage() {
                   {item.date} {item.time}
                 </td>
                 <td style={{ padding: 8 }}>{item.code}</td>
-                <td style={{ padding: 8 }}>{item.title}</td>
+                <td style={{ padding: 8 }}>
+                  {item.url ? (
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      {item.title}
+                    </a>
+                  ) : (
+                    item.title
+                  )}
+                </td>
+                <td style={{ padding: 8 }}>
+                  {item.url ? (
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      PDF
+                    </a>
+                  ) : (
+                    ''
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
