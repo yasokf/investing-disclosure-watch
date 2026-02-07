@@ -1,7 +1,5 @@
 const fs = require('fs/promises');
 const path = require('path');
-const pdfParse = require('pdf-parse');
-
 const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
 const MAX_FILES = 200;
 const CACHE_PATH = path.join(process.cwd(), '.cache', 'tanshin_extract.json');
@@ -274,6 +272,33 @@ const extractFromFile = async (filePath, cache) => {
   const cached = cache[filePath];
   if (cached && cached.mtimeMs === stats.mtimeMs) {
     return { ...cached.result, cached: true };
+  }
+
+  const pdfParse = (() => {
+    try {
+      const req = eval('require');
+      return req('pdf-parse');
+    } catch (error) {
+      return null;
+    }
+  })();
+
+  if (!pdfParse) {
+    const result = {
+      filePath,
+      fileName: path.basename(filePath),
+      name: path.basename(filePath),
+      path: filePath,
+      mtime: stats.mtime,
+      size: stats.size,
+      status: 'unreadable',
+      metrics: null,
+      evidence: {},
+      confidence: 0,
+      error: 'pdf-parseがインストールされていません'
+    };
+    cache[filePath] = { mtimeMs: stats.mtimeMs, result };
+    return { ...result, cached: false };
   }
 
   try {

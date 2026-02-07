@@ -93,3 +93,13 @@ function TanshinKpiTable({ rows }) {
     </div>
   );
 }
+
+export default function TanshinSummaryPage() {
+  return (
+    <main style={{ padding: 24 }}>
+      <h1>Tanshin Summary</h1>
+      <p>このページは決算短信のサマリーを表示します。</p>
+      <TanshinKpiTable rows={[]} />
+    </main>
+  );
+}
