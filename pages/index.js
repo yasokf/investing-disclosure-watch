@@ -18,6 +18,12 @@ export default function Home() {
         >
           短信PDFまとめを開く
         </a>
+        <a
+          href="/tanshin-summary-analysis"
+          style={{ padding: 12, border: '1px solid #ccc', borderRadius: 8 }}
+        >
+          短信PDFまとめ(抽出結果つき)を開く
+        </a>
       </section>
     </main>
   );
