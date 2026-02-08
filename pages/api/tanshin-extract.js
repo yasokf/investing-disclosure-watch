@@ -1,6 +1,8 @@
 const fs = require('fs/promises');
 const path = require('path');
-const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
+const { spawn } = require('child_process');
+const BASE_DIR = path.join(process.cwd(), 'input');
+const OUTPUT_DIR = path.join(process.cwd(), 'output');
 const MAX_FILES = 200;
 const CACHE_PATH = path.join(process.cwd(), '.cache', 'tanshin_extract.json');
 
@@ -238,6 +240,46 @@ const writeCache = async (cache) => {
   await fs.writeFile(CACHE_PATH, JSON.stringify(cache, null, 2));
 };
 
+const runPythonBatch = async (inputDir, outputDir) => {
+  const candidates = ['python', 'python3'];
+
+  const attempt = (commandIndex) =>
+    new Promise((resolve, reject) => {
+      if (commandIndex >= candidates.length) {
+        reject(new Error('python interpreter not found'));
+        return;
+      }
+
+      const command = candidates[commandIndex];
+      const child = spawn(command, ['-m', 'ta', 'batch', '--input', inputDir, '--output', outputDir], {
+        cwd: process.cwd()
+      });
+      let stderr = '';
+
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk.toString();
+      });
+
+      child.on('error', (error) => {
+        if (error.code === 'ENOENT') {
+          attempt(commandIndex + 1).then(resolve).catch(reject);
+          return;
+        }
+        reject(error);
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+        reject(new Error(stderr || `python exited with code ${code}`));
+      });
+    });
+
+  await attempt(0);
+};
+
 const collectPdfFiles = async (rootPath) => {
   const results = [];
   const queue = [rootPath];
@@ -265,6 +307,28 @@ const collectPdfFiles = async (rootPath) => {
   }
 
   return results;
+};
+
+const loadExtractedPayloads = async (outputDir) => {
+  const entries = await fs.readdir(outputDir, { withFileTypes: true });
+  const payloads = [];
+
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json') || entry.name === '.done.json') {
+      continue;
+    }
+    const fullPath = path.join(outputDir, entry.name);
+    const content = await fs.readFile(fullPath, 'utf-8');
+    const parsed = JSON.parse(content);
+    const metadata = parsed._metadata || {};
+    payloads.push({
+      file: metadata.source_file || entry.name.replace(/\.json$/, ''),
+      processedAt: metadata.processed_at || null,
+      data: parsed
+    });
+  }
+
+  return payloads;
 };
 
 const extractFromFile = async (filePath, cache) => {
@@ -341,10 +405,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { path: targetPath } = req.body || {};
+  const { path: rawTargetPath } = req.body || {};
+  const targetPath = rawTargetPath
+    ? path.resolve(BASE_DIR, rawTargetPath)
+    : BASE_DIR;
 
-  if (!targetPath || typeof targetPath !== 'string') {
-    res.status(400).json({ error: 'path is required' });
+  if (rawTargetPath && typeof rawTargetPath !== 'string') {
+    res.status(400).json({ error: 'path must be a string' });
     return;
   }
 
@@ -354,9 +421,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    await fs.mkdir(targetPath, { recursive: true });
     await fs.access(targetPath);
+    await fs.mkdir(OUTPUT_DIR, { recursive: true });
     const files = await collectPdfFiles(targetPath);
     const cache = await readCache();
+
+    await runPythonBatch(targetPath, OUTPUT_DIR);
+    const extractedPayloads = await loadExtractedPayloads(OUTPUT_DIR);
 
     const results = [];
     for (const filePath of files) {
@@ -368,9 +440,12 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       baseDir: BASE_DIR,
+      outputDir: OUTPUT_DIR,
       totalCount: results.length,
+      extractedCount: extractedPayloads.length,
       maxFiles: MAX_FILES,
-      items: results
+      items: results,
+      extracted: extractedPayloads
     });
   } catch (error) {
     res.status(500).json({ error: 'failed to extract', detail: error.message });
