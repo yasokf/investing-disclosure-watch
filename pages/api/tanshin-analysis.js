@@ -16,8 +16,13 @@ const runPythonBatch = async (inputDir, outputDir) => {
       }
 
       const command = candidates[commandIndex];
+      const repoRoot = process.cwd();
       const child = spawn(command, ['-m', 'ta', 'batch', '--input', inputDir, '--output', outputDir], {
-        cwd: process.cwd()
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          PYTHONPATH: [path.join(repoRoot, 'src'), process.env.PYTHONPATH].filter(Boolean).join(path.delimiter)
+        }
       });
       let stderr = '';
 
