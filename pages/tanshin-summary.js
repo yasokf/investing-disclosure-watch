@@ -189,17 +189,15 @@ export default function TanshinSummaryPage() {
     setIsLoading(true);
     setStatus('解析中...');
     try {
+      const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      };
+
       const [kpiResponse, analysisResponse] = await Promise.all([
-        fetch('/api/tanshin-extract', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        }),
-        fetch('/api/tanshin-analysis', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        })
+        fetch('/api/tanshin-extract', requestOptions),
+        fetch('/api/tanshin-analysis', requestOptions)
       ]);
 
       const errors = [];
