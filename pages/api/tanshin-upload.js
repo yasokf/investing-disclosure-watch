@@ -13,15 +13,24 @@ export const config = {
   }
 };
 
+const extractBase64 = (value) => {
+  if (!value || typeof value !== 'string') return null;
+  if (value.startsWith('data:')) {
+    return value.split(',')[1] || null;
+  }
+  return value;
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method not allowed' });
     return;
   }
 
-  const { filename, data } = req.body || {};
+  const { filename, data, dataUrl } = req.body || {};
+  const base64 = extractBase64(data || dataUrl);
 
-  if (!filename || typeof filename !== 'string' || !data || typeof data !== 'string') {
+  if (!filename || typeof filename !== 'string' || !base64) {
     res.status(400).json({ error: 'filename and data are required' });
     return;
   }
@@ -33,7 +42,7 @@ export default async function handler(req, res) {
 
   try {
     const safeName = sanitizeFileName(filename);
-    const buffer = Buffer.from(data, 'base64');
+    const buffer = Buffer.from(base64, 'base64');
     await fs.mkdir(INPUT_DIR, { recursive: true });
     const targetPath = path.join(INPUT_DIR, safeName);
     await fs.writeFile(targetPath, buffer);

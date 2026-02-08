@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 const fmtNum = (v) => {
   if (v === null || v === undefined || Number.isNaN(v)) return '-';
   const n = Number(v);
@@ -99,6 +101,9 @@ export default function TanshinSummaryPage() {
     <main style={{ padding: 24 }}>
       <h1>Tanshin Summary</h1>
       <p>このページは決算短信のサマリーを表示します。</p>
+      <p style={{ marginTop: 8 }}>
+        PDFをアップロードする場合は <Link href="/tanshin-upload">PDF取り込み</Link> を利用してください。
+      </p>
       <TanshinKpiTable rows={[]} />
     </main>
   );
