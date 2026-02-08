@@ -3,7 +3,7 @@ const path = require('path');
 
 const MAX_FILES = 500;
 
-const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
+const BASE_DIR = path.join(process.cwd(), 'input');
 
 const isWithinAllowedRoots = (targetPath) => {
   const resolvedTarget = path.resolve(targetPath);
@@ -55,10 +55,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { path: targetPath } = req.body || {};
+  const { path: rawTargetPath } = req.body || {};
+  const targetPath = rawTargetPath
+    ? path.resolve(BASE_DIR, rawTargetPath)
+    : BASE_DIR;
 
-  if (!targetPath || typeof targetPath !== 'string') {
-    res.status(400).json({ error: 'path is required' });
+  if (rawTargetPath && typeof rawTargetPath !== 'string') {
+    res.status(400).json({ error: 'path must be a string' });
     return;
   }
 
@@ -68,6 +71,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    await fs.mkdir(targetPath, { recursive: true });
     await fs.access(targetPath);
     const files = await collectPdfFiles(targetPath);
     const totalSize = files.reduce((sum, file) => sum + file.size, 0);

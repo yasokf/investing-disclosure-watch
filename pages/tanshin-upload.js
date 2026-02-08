@@ -6,8 +6,10 @@ export default function TanshinUploadPage() {
 
   const handleUpload = async (event) => {
     event.preventDefault();
-    const files = event.target.elements.pdfs?.files;
-    if (!files || files.length === 0) {
+    const fileInput = event.target.elements.pdfs?.files;
+    const folderInput = event.target.elements.folder?.files;
+    const files = [...(fileInput ? Array.from(fileInput) : []), ...(folderInput ? Array.from(folderInput) : [])];
+    if (files.length === 0) {
       setStatus('PDFファイルを選択してください。');
       return;
     }
@@ -16,7 +18,7 @@ export default function TanshinUploadPage() {
     setStatus('アップロード中...');
 
     try {
-      const uploads = Array.from(files).map(async (file) => {
+      const uploads = files.map(async (file) => {
         const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
@@ -27,7 +29,11 @@ export default function TanshinUploadPage() {
         const response = await fetch('/api/tanshin-upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename: file.name, data: base64 })
+          body: JSON.stringify({
+            filename: file.name,
+            relativePath: file.webkitRelativePath || file.name,
+            data: base64
+          })
         });
         if (!response.ok) {
           const payload = await response.json();
@@ -50,7 +56,24 @@ export default function TanshinUploadPage() {
       <h1>PDF取り込み</h1>
       <p>決算短信PDFをアップロードして、inputフォルダに保存します。</p>
       <form onSubmit={handleUpload} style={{ marginTop: 16 }}>
-        <input type="file" name="pdfs" accept="application/pdf" multiple />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label>
+            PDFファイル選択:
+            <input type="file" name="pdfs" accept="application/pdf" multiple style={{ marginLeft: 8 }} />
+          </label>
+          <label>
+            フォルダ選択:
+            <input
+              type="file"
+              name="folder"
+              accept="application/pdf"
+              multiple
+              webkitdirectory="true"
+              directory="true"
+              style={{ marginLeft: 8 }}
+            />
+          </label>
+        </div>
         <button type="submit" disabled={isUploading} style={{ marginLeft: 8 }}>
           {isUploading ? 'アップロード中...' : 'アップロード'}
         </button>
