@@ -189,26 +189,60 @@ export default function TanshinSummaryPage() {
     setIsLoading(true);
     setStatus('解析中...');
     try {
-      const response = await fetch('/api/tanshin-extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
-      if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload.error || 'failed to extract');
+      const [kpiResponse, analysisResponse] = await Promise.all([
+        fetch('/api/tanshin-extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        }),
+        fetch('/api/tanshin-analysis', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        })
+      ]);
+
+      const errors = [];
+      let kpiPayload = null;
+      let analysisPayload = null;
+
+      if (kpiResponse.ok) {
+        kpiPayload = await kpiResponse.json();
+      } else {
+        const payload = await kpiResponse.json();
+        errors.push(payload.error || 'failed to extract metrics');
       }
-      const payload = await response.json();
-      setRows(payload.items || []);
-      setExtracted(payload.extracted || []);
+
+      if (analysisResponse.ok) {
+        analysisPayload = await analysisResponse.json();
+        if (analysisPayload.error) {
+          errors.push(analysisPayload.error);
+        }
+      } else {
+        const payload = await analysisResponse.json();
+        errors.push(payload.error || 'failed to run analysis');
+      }
+
+      if (kpiPayload) {
+        setRows(kpiPayload.items || []);
+      }
+      if (analysisPayload) {
+        setExtracted(analysisPayload.extracted || []);
+      }
+
       setMetadata({
-        totalCount: payload.totalCount,
-        extractedCount: payload.extractedCount,
-        maxFiles: payload.maxFiles,
-        baseDir: payload.baseDir,
-        outputDir: payload.outputDir
+        totalCount: kpiPayload?.totalCount ?? 0,
+        maxFiles: kpiPayload?.maxFiles ?? 0,
+        baseDir: kpiPayload?.baseDir ?? '-',
+        outputDir: analysisPayload?.outputDir ?? '-',
+        extractedCount: analysisPayload?.extractedCount ?? 0
       });
-      setStatus('解析が完了しました。');
+
+      if (errors.length > 0) {
+        setStatus(`解析に失敗しました: ${errors.join(' / ')}`);
+      } else {
+        setStatus('解析が完了しました。');
+      }
     } catch (error) {
       setStatus(`解析に失敗しました: ${error.message}`);
       setRows([]);
