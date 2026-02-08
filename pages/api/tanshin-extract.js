@@ -1,6 +1,6 @@
 const fs = require('fs/promises');
 const path = require('path');
-const BASE_DIR = 'G:\\マイドライブ\\python\\tanshin_auto\\pdf';
+const BASE_DIR = path.join(process.cwd(), 'input');
 const MAX_FILES = 200;
 const CACHE_PATH = path.join(process.cwd(), '.cache', 'tanshin_extract.json');
 
@@ -341,10 +341,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { path: targetPath } = req.body || {};
+  const { path: rawTargetPath } = req.body || {};
+  const targetPath = rawTargetPath
+    ? path.resolve(BASE_DIR, rawTargetPath)
+    : BASE_DIR;
 
-  if (!targetPath || typeof targetPath !== 'string') {
-    res.status(400).json({ error: 'path is required' });
+  if (rawTargetPath && typeof rawTargetPath !== 'string') {
+    res.status(400).json({ error: 'path must be a string' });
     return;
   }
 
@@ -354,6 +357,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    await fs.mkdir(targetPath, { recursive: true });
     await fs.access(targetPath);
     const files = await collectPdfFiles(targetPath);
     const cache = await readCache();

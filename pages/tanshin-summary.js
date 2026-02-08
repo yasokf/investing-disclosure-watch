@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
 
 const fmtNum = (v) => {
   if (v === null || v === undefined || Number.isNaN(v)) return '-';
@@ -97,6 +98,45 @@ function TanshinKpiTable({ rows }) {
 }
 
 export default function TanshinSummaryPage() {
+  const [rows, setRows] = useState([]);
+  const [status, setStatus] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [metadata, setMetadata] = useState(null);
+
+  const loadSummary = useCallback(async () => {
+    setIsLoading(true);
+    setStatus('解析中...');
+    try {
+      const response = await fetch('/api/tanshin-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error || 'failed to extract');
+      }
+      const payload = await response.json();
+      setRows(payload.items || []);
+      setMetadata({
+        totalCount: payload.totalCount,
+        maxFiles: payload.maxFiles,
+        baseDir: payload.baseDir
+      });
+      setStatus('解析が完了しました。');
+    } catch (error) {
+      setStatus(`解析に失敗しました: ${error.message}`);
+      setRows([]);
+      setMetadata(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary]);
+
   return (
     <main style={{ padding: 24 }}>
       <h1>Tanshin Summary</h1>
@@ -104,7 +144,18 @@ export default function TanshinSummaryPage() {
       <p style={{ marginTop: 8 }}>
         PDFをアップロードする場合は <Link href="/tanshin-upload">PDF取り込み</Link> を利用してください。
       </p>
-      <TanshinKpiTable rows={[]} />
+      <div style={{ marginTop: 16 }}>
+        <button type="button" onClick={loadSummary} disabled={isLoading}>
+          {isLoading ? '解析中...' : '再解析'}
+        </button>
+        {status ? <p style={{ marginTop: 8 }}>{status}</p> : null}
+        {metadata ? (
+          <p style={{ marginTop: 8 }}>
+            対象フォルダ: {metadata.baseDir} / 件数: {metadata.totalCount} (最大 {metadata.maxFiles} 件)
+          </p>
+        ) : null}
+      </div>
+      <TanshinKpiTable rows={rows} />
     </main>
   );
 }
